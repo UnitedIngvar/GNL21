@@ -17,58 +17,50 @@ int	ft_free_on_error(char **p1, char **p2, int sig)
 	return (sig);
 }
 
-static ssize_t	ft_get_line(char **saved, char **line)
+static char	*ft_get_line(char *cache)
 {
-	char	*saved_p;
-	char	*temp;
+	ssize_t	i;
+	char	*line;
 
-	saved_p = ft_strchr(*saved, '\n');
-	if (saved_p)
+	if (!cache)
+		return (NULL);
+	while((*cache)[i] && cache[i] != '\n')
+		i++;
+	line = ft_calloc(sizeof(char), i + 1);
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (cache[i] && cache[i] != '\n')
 	{
-		saved_p = '\0';
-		saved_p++;
-		*line = ft_strdup(saved);
-		if (!line)
-			return (ft_free_on_signal(saved, NULL, -1));
-		temp = ft_strdup(saved_p);
-		if (!temp)
-			return (ft_free_on_signal(saved, line, -1));
-		free (*saved);
-		*saved = temp;
-		return (1);
+		line[i] = cache[i];
+		i++;
 	}
-	return (0);
+	return (line);
 }
-ssize_t get_saved(char **saved, char **line)
-{
-	ssize_t flag;
 
-}
 int	get_next_line(int fd, char **line)
 {
-	static char *saved;
-	char		*buf;
-	ssize_t		flag;
+	static char	*cache;
+	char	*buf;
+	ssize_t		fr;
 
-	flag = 1;
-	while (flag)
+	if (fd < -1 || !*line || BUFFER_SIZE <= 0)
+		return (-1);
+	buf = ft_calloc(sizeof(char), BUFFER_SIZE + 1);
+	if (!buf)
+		return (-1);
+	fr = 1;
+	while (fr && !ft_strchr(cache, '\n'))
 	{
-		flag = ft_get_line(&saved, line);
-		if (flag)
-			return(flag);
-		else
-			line = ft_strjoin(line, buf);
-		buf = ft_calloc(sizeof(char), BUFFER_SIZE);
-		if (!buf)
-			return (ft_free_on_signal(&saved, line, -1)) ;
-		flag = read(fd, buf, BUFFER_SIZE);
-		if (flag == -1)
-		{
-			ft_free_on_signal(line, NULL, 0);
-			return (ft_free_on_signal(&buf, &saved, -1));
-		}
-		saved = ft_strjoin(saved, buf);
-		free(buf);
+		fr = read(fd, buf, BUFFER_SIZE);
+		if (fr == -1)
+			return (ft_free_on_signal(&buf, &cache, -1));
+		cache = ft_strjoin(cache, buf);
 	}
-	return (0);
+	free(buf);
+	*line = ft_get_line(cache);
+	cache = ft_strtrunc(cache);
+	if (fd == 0)
+		return (0);
+	return (1);
 }
